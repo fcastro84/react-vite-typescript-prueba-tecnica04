@@ -4,3 +4,10 @@
   text-align: center;
 }
 
+.color-row tr:nth-child(odd) {
+  background-color: #94a3b8;
+}
+
+.color-row tr:nth-child(even) {
+  background-color: #f1f5f9;
+}
