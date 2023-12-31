@@ -95,3 +95,10 @@ export interface Picture {
     medium:    string;
     thumbnail: string;
 }
+
+export enum SortedBy {
+    NONE = 'none',
+    NAME = 'first',
+    LAST = 'last',
+    COUNTRY = 'country',
+}

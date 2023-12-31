@@ -1,18 +1,28 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { fetchUsers } from './services/fetchUsers'
-import { User } from './interfaces/types.d'
+import { SortedBy, User } from './interfaces/types.d'
+import Userslist from './components/Userslist'
 
 function App() {
 
   const [users, setUsers] = useState<User[]>([])
   const [showColor, setShowColor] = useState(false)
-  const [sortCountry, setSortCountry] = useState(false)
+  const [sorting, setSorting] = useState<SortedBy>(SortedBy.NONE)
   const [filterCountry, setFilterCountry] = useState('')
   const originalArray = useRef<User[]>([])
 
   const handleToogleColor = () => {
     setShowColor(!showColor)
+  }
+
+  const handleToogleSortByCountry = () => {
+    const sort = ( sorting === SortedBy.NONE || sorting === SortedBy.LAST || sorting === SortedBy.NAME) ? SortedBy.COUNTRY : SortedBy.NONE 
+    setSorting(sort)
+  }
+
+  const handleSort = (sort: SortedBy) => {
+    setSorting(sort)
   }
 
   const handleDeleteUser = ( email: string ) => {
@@ -23,17 +33,62 @@ function App() {
   const handleReset = () => {
     setUsers(originalArray.current)
   }
-
   
-  const filterUser = filterCountry !== ''
+  const filterUser = useMemo(() => {
+    return filterCountry !== '' && filterCountry.length > 0
                           ? users.filter( user => user.location.country.toLowerCase().includes(filterCountry.toLowerCase()))
                           : users
+  }, [users, filterCountry])
 
  
 
-  const sortingUser = sortCountry
-                          ? filterUser.toSorted((a: User,b:User) => a.location.country.localeCompare(b.location.country))
-                          : filterUser
+  const sortingUser = useMemo(() => {
+    
+    //Variante 1
+    // if( sorting === SortedBy.NONE) return filterUser
+
+    // if( sorting === SortedBy.NAME){
+    //   return filterUser.toSorted((a: User,b:User) => a.name.first.localeCompare(b.name.first))
+    // }
+
+    // if( sorting === SortedBy.LAST){
+    //   return filterUser.toSorted((a: User,b:User) => a.name.last.localeCompare(b.name.last))
+    // }
+
+    // if( sorting === SortedBy.COUNTRY){
+    //   return filterUser.toSorted((a: User,b:User) => a.location.country.localeCompare(b.location.country))
+    // }
+
+    //Variante 2
+    // switch (sorting) {
+    //   case SortedBy.NAME: {
+    //     return filterUser.toSorted((a: User,b:User) => a.name.first.localeCompare(b.name.first))
+    //   }
+    //   case SortedBy.LAST: {
+    //     return filterUser.toSorted((a: User,b:User) => a.name.last.localeCompare(b.name.last))
+    //   }
+    //   case SortedBy.COUNTRY: {
+    //     return filterUser.toSorted((a: User,b:User) => a.location.country.localeCompare(b.location.country))
+    //   }
+    //   default:
+    //     return filterUser
+    // }
+
+    //Variante 3 Midulive
+    if( sorting === SortedBy.NONE) return filterUser
+
+    const compareProperties: Record<string, (user: User) => string> = {
+      [SortedBy.COUNTRY]: user => user.location.country,
+      [SortedBy.NAME]: user => user.name.first,
+      [SortedBy.LAST]: user => user.name.last
+    }
+
+    return filterUser.toSorted( (a, b) => {
+      const extractProperty = compareProperties[sorting]
+      return extractProperty(a).localeCompare(extractProperty(b))
+    })
+   
+  }, [sorting, filterUser] )
 
   useEffect(() => {
     fetchUsers()
@@ -47,59 +102,17 @@ function App() {
    
   return (
     <>
-      <header className="navbar bg-neutral text-neutral-content justify-center p-10">
-        <h1 className='text-center text-6xl'>Prueba Técnica</h1>
+      <header className="navbar bg-neutral text-neutral-content justify-center p-10 flex-col gap-4">
+        <h1 className='text-center text-6xl'>Prueba Técnica (React + TypeScript)</h1>
+        <p className='text-lg'>El objetivo de esta prueba técnica es crear una aplicación similar a la que se proporciona en este <a href="https://midu-react-11.surge.sh/" target='_blank' className='link ml-3 font-extrabold'> EXAMPLE </a> </p>
       </header>
       <nav className="menu menu-horizontal bg-white w-full border justify-center gap-4 p-4 mb-6">
         <button className='btn btn-outline btn-primary' onClick={handleToogleColor}>Colorear rows</button>
-        <button className='btn btn-outline btn-primary' onClick={() => setSortCountry(!sortCountry)}>Ordenar por país</button>
+        <button className='btn btn-outline btn-primary' onClick={handleToogleSortByCountry}>Ordenar por país</button>
         <button className='btn btn-outline btn-primary' onClick={handleReset}>Resetear estado</button>
         <input type="text" className='input input-bordered w-full max-w-xs' placeholder='Filtra por país' onChange={(e) => {setFilterCountry(e.target.value)}} />
       </nav>
-      <main className='overflow-x-auto'>
-          <table className="table">
-          {/* head */}
-          <thead>
-            <tr>
-              <th className='font-black text-lg'>Foto</th>
-              <th className='font-black text-lg'>Nombre</th>
-              <th className='font-black text-lg'>Apellido</th>
-              <th className='font-black text-lg'>País</th>
-              <th className='font-black text-lg'>Acciones</th>
-            </tr>
-          </thead>
-          <tbody className={showColor ? 'color-row' : ''}>
-            {/* row 1 */}
-            {
-              sortingUser.map( user => {
-                return (
-                  <tr key={user.email}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div className="avatar">
-                          <div className="mask mask-squircle w-12 h-12">
-                            <img src={user.picture.thumbnail} alt={user.name.title} />
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      {user.name.first}
-                    </td>
-                    <td>
-                    {user.name.last}
-                    </td>
-                    <td>{user.location.country}</td>
-                    <th>
-                      <button className="btn btn-primary btn-md" onClick={() => handleDeleteUser(user.email)}>Borrar</button>
-                    </th>
-                </tr>
-                )
-              } )
-            }
-          </tbody>
-      </table>
-      </main>
+      <Userslist sortingUser={sortingUser} showColor={showColor} deleteUser={handleDeleteUser} changeSort={handleSort} />
     </>
   )
 }
